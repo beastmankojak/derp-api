@@ -1,6 +1,11 @@
+const perfectEggFilter = require('../filters/perfectEggFilter');
+const symbolFilter = require('../filters/symbolFilter');
+const xChromoFilter = require('../filters/xChromoFilter');
+const yChromoFilter = require('../filters/yChromoFilter');
+
 const applyRoutes = (app, mongoClient) => {
   const derpCollection = mongoClient.db('derp').collection('derpMeta');
-  const eggCollection = mongoClient.db('derp').collection('eggMeta');
+  const eggCollection = mongoClient.db('derp').collection('eggsWithParent');
 
   app.get('/derp-birds/:derpId', async (req, res) => {
     const { params: { derpId } } = req;
@@ -26,26 +31,55 @@ const applyRoutes = (app, mongoClient) => {
       return res.status(400).send({ error: 'eggId must be a five digit number'});
     }
 
-    // const egg = await eggCollection.findOne({ 'eggId': `DE${eggId}` });
-    const egg = await eggCollection.aggregate([
-      { $match: { eggId: `DE${eggId}` } },
-      { $lookup: { 
-        from: 'derpMeta',
-        localField: 'yChromo',
-        foreignField: 'derpId',
-        as: 'parent'
-      } },
-      { $project: {
-        eggId: 1, hatchDate: 1, image: 1, name: 1, perfect: 1, symbol: 1, xChromo: 1,
-        parent: { $arrayElemAt: [ '$parent', 0 ] }  
-      } }
-    ]).next();
+    const egg = await eggCollection.findOne({ 'eggId': `DE${eggId}` });
     res.send({ egg });
   });
+
+  app.get('/derp-eggs/', async (req, res) => {
+    const { query: { perfect, symbol, xChromo, yChromo, page, pageSize } } = req;
+
+    if (perfect && !/^(yes|no|redneck|dave|stoner|dj|diety|astro|viking|ghost|corpo|magic|monk|ninja|scientist|cyborg|buff)$/.test(perfect)) {
+      return res.status(400).send({ error: 'param invalid: perfect' });
+    }
+    if(symbol && !/^(square|triangle|▢|▽)$/.test(symbol)) {
+      return res.status(400).send({ error: 'param invalid: symbol' });
+    }
+    if (xChromo && !/^(single|double|crazy)$/.test(xChromo)) {
+      return res.status(400).send({ error: 'param invalid: xChromo' });
+    }
+    if (yChromo && !/^DP\d{5}$/.test(yChromo)) {
+      return res.status(400).send({ error: 'param invalid: yChromo' });
+    }
+    if (page && !/^\d+$/.test(page)) {
+      return res.status(400).send({ error: 'param invalid: page' });
+    }
+    if (pageSize && !/^\d+$/.test(pageSize)) {
+      return res.status(400).send({ error: 'param invalid: pageSize' });
+    }
+
+    const limit = pageSize ? parseInt(pageSize, 10) : 50;
+    if (limit < 0 || limit > 200) {
+      return res.status(400).send({ error: 'page size must be between 1 and 200' });
+    }
+    const skip = page ? (parseInt(page, 10) - 1) * limit : 0;
+    if (skip < 0 || skip > 15000) {
+      return res.status(400).send({ error: 'computed offset must be between 1 and 15000' });
+    }
+
+    const query = {
+      ...perfectEggFilter(perfect),
+      ...symbolFilter(symbol),
+      ...xChromoFilter(xChromo),
+      ...yChromoFilter(yChromo)
+    };
+
+    const egg = await eggCollection.find(query, { sort: { eggId: 1 }, skip, limit }).toArray();
+    res.send(egg);
+  });
   
-  app.get('/address/:address', (req, res) => {
+  // app.get('/address/:address', (req, res) => {
   
-  });  
+  // });  
 };
 
 module.exports = applyRoutes;
