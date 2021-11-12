@@ -4,12 +4,15 @@
   "description": "",
   "main": "src/index.js",
   "scripts": {
+    "dockerBuild": "docker build -f docker/Dockerfile -t beastmankojak/derp-api .",
+    "dockerPush": "docker push beastmankojak/derp-api:latest",
     "start": "node src/index.js"
   },
   "keywords": [],
   "author": "beastman.kojak",
   "license": "MIT",
   "dependencies": {
+    "cors": "^2.8.5",
     "express": "^4.17.1",
     "mongodb": "^4.1.3"
   }

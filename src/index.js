@@ -1,4 +1,5 @@
 const express = require('express');
+const cors = require('cors');
 const { MongoClient } = require('mongodb');
 const applyRoutes = require('./webserver/applyRoutes');
 
@@ -12,6 +13,10 @@ const MONGODB_URL = process.env.MONGODB_URL || 'mongodb://localhost:27017';
     console.log('Connected to database');
 
     const app = express();
+    console.log('ENV:', process.env.NODE_ENV);
+    if (process.env.NODE_ENV !== 'prod') {
+      app.use(cors({ origin: '*' }));
+    }
     applyRoutes(app, mongoClient);
 
     app.listen(PORT, () => {
