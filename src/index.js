@@ -6,6 +6,8 @@ const applyRoutes = require('./webserver/applyRoutes');
 const PORT = process.env.PORT || 3000;
 const MONGODB_URL = process.env.MONGODB_URL || 'mongodb://localhost:27017';
 
+const origin = process.env.NODE_ENV === 'prod' ? /\/\/(www\.)?beastmankojak\.com$/ : '*';
+
 (async () => {
   const mongoClient = new MongoClient(MONGODB_URL);
   try {
@@ -14,9 +16,7 @@ const MONGODB_URL = process.env.MONGODB_URL || 'mongodb://localhost:27017';
 
     const app = express();
     console.log('ENV:', process.env.NODE_ENV);
-    if (process.env.NODE_ENV !== 'prod') {
-      app.use(cors({ origin: '*' }));
-    }
+    app.use(cors({ origin }));
     applyRoutes(app, mongoClient);
 
     app.listen(PORT, () => {

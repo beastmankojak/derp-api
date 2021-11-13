@@ -3,6 +3,11 @@ const symbolFilter = require('../filters/symbolFilter');
 const xChromoFilter = require('../filters/xChromoFilter');
 const yChromoFilter = require('../filters/yChromoFilter');
 
+const sortMap = {
+  eggIdAsc: { eggId: 1 },
+  eggIdDesc: { eggId: -1 },
+};
+
 const applyRoutes = (app, mongoClient) => {
   const derpCollection = mongoClient.db('derp').collection('derpMeta');
   const eggCollection = mongoClient.db('derp').collection('eggsWithParent');
@@ -36,7 +41,7 @@ const applyRoutes = (app, mongoClient) => {
   });
 
   app.get('/derp-eggs/', async (req, res) => {
-    const { query: { perfect, symbol, xChromo, yChromo, page, pageSize } } = req;
+    const { query: { perfect, symbol, xChromo, yChromo, sort = 'eggIdAsc', page, pageSize } } = req;
 
     if (perfect && !/^(yes|no|redneck|dave|stoner|dj|diety|astro|viking|ghost|corpo|magic|monk|ninja|scientist|cyborg|buff)$/.test(perfect)) {
       return res.status(400).send({ error: 'param invalid: perfect' });
@@ -47,8 +52,11 @@ const applyRoutes = (app, mongoClient) => {
     if (xChromo && !/^(single|double|crazy)$/.test(xChromo)) {
       return res.status(400).send({ error: 'param invalid: xChromo' });
     }
-    if (yChromo && !/^DP\d{5}$/.test(yChromo)) {
+    if (yChromo && !/^DP(\d{5}|\?)$/.test(yChromo)) {
       return res.status(400).send({ error: 'param invalid: yChromo' });
+    }
+    if (sort && !/^eggId(Asc|Desc)$/.test(sort)) {
+      return res.status(400).send({ eerror: 'param invalid: sort' });
     }
     if (page && !/^\d+$/.test(page)) {
       return res.status(400).send({ error: 'param invalid: page' });
@@ -73,7 +81,7 @@ const applyRoutes = (app, mongoClient) => {
       ...yChromoFilter(yChromo)
     };
 
-    const egg = await eggCollection.find(query, { sort: { eggId: 1 }, skip, limit }).toArray();
+    const egg = await eggCollection.find(query, { sort: sortMap[sort], skip, limit }).toArray();
     res.send(egg);
   });
   
