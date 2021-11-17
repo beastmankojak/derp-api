@@ -9,9 +9,14 @@ const sortMap = {
   eggIdDesc: { eggId: -1 },
 };
 
+const filter = (prop) => prop[Object.keys(prop)[0]] ? { ...prop } : {};
+
 const applyRoutes = (app, mongoClient) => {
-  const derpCollection = mongoClient.db('derp').collection('derpMeta');
-  const eggCollection = mongoClient.db('derp').collection('eggsWithParent');
+  const derpDb = mongoClient.db('derp');
+  const derpCollection = derpDb.collection('derpMeta');
+  const eggCollection = derpDb.collection('eggsWithParent');
+  const derplingCollection = derpDb.collection('derplingMeta');
+  const derplingAttributes = derpDb.collection('derplingAttributes');
 
   app.get('/derp-birds/:derpId', async (req, res) => {
     const { params: { derpId } } = req;
@@ -88,6 +93,52 @@ const applyRoutes = (app, mongoClient) => {
 
     const egg = await eggCollection.find(query, { sort: sortMap[sort], skip, limit }).toArray();
     res.send(egg);
+  });
+
+  app.get('/derplings/', async (req, res) => {
+    const { query: { aura, beak, body, eyes, head, cargo, color, gender, eggshell, pedestal, basecolor, dadbodTag, sort = 'derplingIdAsc', page, pageSize } } = req;
+
+    if (sort && !/^derplingId(Asc|Desc)$/.test(sort)) {
+      return res.status(400).send({ eerror: 'param invalid: sort' });
+    }
+    if (page && !/^\d+$/.test(page)) {
+      return res.status(400).send({ error: 'param invalid: page' });
+    }
+    if (pageSize && !/^\d+$/.test(pageSize)) {
+      return res.status(400).send({ error: 'param invalid: pageSize' });
+    }
+
+    const limit = pageSize ? parseInt(pageSize, 10) : 50;
+    if (limit < 0 || limit > 200) {
+      return res.status(400).send({ error: 'page size must be between 1 and 200' });
+    }
+    const skip = page ? (parseInt(page, 10) - 1) * limit : 0;
+    if (skip < 0 || skip > 7500) {
+      return res.status(400).send({ error: 'computed offset must be between 1 and 7500' });
+    }
+
+    const query = {
+      ...filter({aura}),
+      ...filter({beak}),
+      ...filter({body}),
+      ...filter({eyes}),
+      ...filter({head}),
+      ...filter({cargo}),
+      ...filter({color}),
+      ...filter({gender}),
+      ...filter({eggshell}),
+      ...filter({pedestal}),
+      ...filter({basecolor}),
+      ...filter({dadbodTag})
+    };
+
+    const derplings = await derplingCollection.find(query, { skip, limit }).toArray();
+    res.send(derplings);
+  });
+
+  app.get('/derplings/attributes/', async (req, res) => {
+    const attributes = await derplingAttributes.findOne({});
+    res.send(attributes);
   });
   
   // app.get('/address/:address', (req, res) => {
