@@ -3,6 +3,7 @@ const parentPerfectEggFilter = require('../filters/parentPerfectEggFilter');
 const symbolFilter = require('../filters/symbolFilter');
 const xChromoFilter = require('../filters/xChromoFilter');
 const yChromoFilter = require('../filters/yChromoFilter');
+const twinsFilter = require('../filters/twinsFilter');
 const _ = require('lodash');
 
 const sortMap = {
@@ -98,10 +99,13 @@ const applyRoutes = (app, mongoClient) => {
   });
 
   app.get('/derplings/', async (req, res) => {
-    const { query: { aura, beak, body, eyes, head, cargo, color, gender, eggshell, pedestal, basecolor, dadbodTag, sort = 'derplingIdAsc', page, pageSize } } = req;
+    const { query: { aura, beak, body, eyes, head, cargo, color, gender, eggshell, pedestal, basecolor, dadbodTag, twins, sort = 'derplingIdAsc', page, pageSize } } = req;
 
     if (sort && !/^derplingId(Asc|Desc)$/.test(sort)) {
       return res.status(400).send({ eerror: 'param invalid: sort' });
+    }
+    if (twins && !/^(yes|no)$/.test(twins)) {
+      return res.status(400).send({ error: 'param invalid: twins' });
     }
     if (page && !/^\d+$/.test(page)) {
       return res.status(400).send({ error: 'param invalid: page' });
@@ -131,7 +135,8 @@ const applyRoutes = (app, mongoClient) => {
       ...filter({eggshell}),
       ...filter({pedestal}),
       ...filter({basecolor}),
-      ...filter({dadbodTag})
+      ...filter({dadbodTag}),
+      ...twinsFilter(twins),
     };
 
     const derplings = await derplingCollection.find(query, { skip, limit }).toArray();
