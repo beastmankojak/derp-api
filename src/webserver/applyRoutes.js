@@ -3,6 +3,7 @@ const parentPerfectEggFilter = require('../filters/parentPerfectEggFilter');
 const symbolFilter = require('../filters/symbolFilter');
 const xChromoFilter = require('../filters/xChromoFilter');
 const yChromoFilter = require('../filters/yChromoFilter');
+const _ = require('lodash');
 
 const sortMap = {
   eggIdAsc: { eggId: 1 },
@@ -17,6 +18,7 @@ const applyRoutes = (app, mongoClient) => {
   const eggCollection = derpDb.collection('eggsWithParent');
   const derplingCollection = derpDb.collection('derplingMeta');
   const derplingAttributes = derpDb.collection('derplingAttributes');
+  const derplingStats = derpDb.collection('derplingStats');
 
   app.get('/derp-birds/:derpId', async (req, res) => {
     const { params: { derpId } } = req;
@@ -137,8 +139,22 @@ const applyRoutes = (app, mongoClient) => {
   });
 
   app.get('/derplings/attributes/', async (req, res) => {
-    const attributes = await derplingAttributes.findOne({});
-    res.send(attributes);
+    const stats = await derplingStats.findOne({});
+    const attributes = (await derplingAttributes.find({}).toArray()).map((trait) => {
+      const { _id, values } = trait;
+      return { 
+        _id,
+        values: _.sortBy(values, [(t) => t[Object.keys(t)[0]].count])
+          .map((t) => {
+            const value = Object.keys(t)[0];
+            return {
+              label: `${value} (${t[value].count} / ${t[value].pct.toFixed(2)}%)`,
+              value
+            };
+          })
+      };
+    }).reduce((acc, curr) => ({ ...acc, [curr._id]: curr.values}), {});
+    res.send({stats, attributes});
   });
   
   // app.get('/address/:address', (req, res) => {
