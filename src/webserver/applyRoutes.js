@@ -11,6 +11,15 @@ const sortMap = {
   eggIdDesc: { eggId: -1 },
 };
 
+const derplingSortMap = {
+  derplingIdAsc: { derplingId: 1 },
+  derplingIdDesc: { derplingId: -1 },
+  hatchAsc: { _id: 1 },
+  hatchDesc: { _id: -1 },
+  rankAsc: { rank: 1 },
+  rankDesc: { rank: -1 },
+};
+
 const filter = (prop) => prop[Object.keys(prop)[0]] ? { ...prop } : {};
 
 const applyRoutes = (app, mongoClient) => {
@@ -18,7 +27,7 @@ const applyRoutes = (app, mongoClient) => {
   const derpCollection = derpDb.collection('derpMeta');
   const eggCollection = derpDb.collection('eggsWithParent');
   const derplingCollection = derpDb.collection('derplingMeta');
-  const derplingAttributes = derpDb.collection('derplingAttributes');
+  const derplingTraits = derpDb.collection('derplingTraits');
   const derplingStats = derpDb.collection('derplingStats');
 
   app.get('/derp-birds/:derpId', async (req, res) => {
@@ -99,9 +108,9 @@ const applyRoutes = (app, mongoClient) => {
   });
 
   app.get('/derplings/', async (req, res) => {
-    const { query: { aura, beak, body, eyes, head, cargo, color, gender, eggshell, pedestal, basecolor, dadbodTag, twins, sort = 'derplingIdAsc', page, pageSize } } = req;
+    const { query: { aura, beak, body, eyes, head, cargo, color, gender, eggshell, pedestal, basecolor, dadbodTag, twins, sort = 'hatchAsc', page, pageSize } } = req;
 
-    if (sort && !/^derplingId(Asc|Desc)$/.test(sort)) {
+    if (sort && !/^(derplingId(Asc|Desc))|(hatch(Asc|Desc))|(rank(Asc|Desc))$/.test(sort)) {
       return res.status(400).send({ eerror: 'param invalid: sort' });
     }
     if (twins && !/^(yes|no)$/.test(twins)) {
@@ -139,22 +148,22 @@ const applyRoutes = (app, mongoClient) => {
       ...twinsFilter(twins),
     };
 
-    const derplings = await derplingCollection.find(query, { skip, limit }).toArray();
+    const derplings = await derplingCollection.find(query, { sort: derplingSortMap[sort], skip, limit }).toArray();
     res.send(derplings);
   });
 
   app.get('/derplings/attributes/', async (req, res) => {
     const stats = await derplingStats.findOne({});
-    const attributes = (await derplingAttributes.find({}).toArray()).map((trait) => {
+    const attributes = (await derplingTraits.find({}).toArray()).map((trait) => {
       const { _id, values } = trait;
       return { 
         _id,
-        values: _.sortBy(values, [(t) => t[Object.keys(t)[0]].count])
-          .map((t) => {
-            const value = Object.keys(t)[0];
+        values: _.sortBy(values, ['count'])
+          .map(({name, count, pct}) => {
+            // const value = Object.keys(t)[0];
             return {
-              label: `${value} (${t[value].count} / ${t[value].pct.toFixed(2)}%)`,
-              value
+              label: `${name} (${count} / ${pct.toFixed(2)}%)`,
+              value: name
             };
           })
       };
