@@ -170,6 +170,18 @@ const applyRoutes = (app, mongoClient) => {
     }).reduce((acc, curr) => ({ ...acc, [curr._id]: curr.values}), {});
     res.send({stats, attributes});
   });
+
+  app.get('/derplings/:derplingId', async (req, res) => {
+    const { params: { derplingId } } = req;
+    const [ ,derplingNum ] = derplingId.match(/^(?:DR)?(\d{5})$/) || [];
+    if (!derplingNum) {
+      return res.status(400).send({ error: 'derplingId must be a five digit number, optionally preceded by DR'});
+    }
+
+    const derpling = await derplingCollection.findOne({ 'derplingId': `DR${derplingNum}` });
+    res.send({ derpling });
+  });
+
   
   // app.get('/address/:address', (req, res) => {
   
