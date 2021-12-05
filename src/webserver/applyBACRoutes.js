@@ -7,6 +7,7 @@ const rockerSortMap = {
   rankAsc: { rank: 1 },
   rankDesc: { rank: -1 },
 };
+const spaceshipSortMap = rockerSortMap;
 
 const pad = '0000';
 
@@ -17,6 +18,9 @@ const applyRoutes = (app, mongoClient) => {
   const rockerCollection = bacDb.collection('babyRockerMeta');
   const rockerTraits = bacDb.collection('rockerTraits');
   const rockerStats = bacDb.collection('rockerStats');
+  const spaceshipCollection = bacDb.collection('bacSpaceshipMeta');
+  const spaceshipTraits = bacDb.collection('bacSpaceshipTraits');
+  const spaceshipStats = bacDb.collection('bacSpaceshipStats');
 
   app.get('/baby-rocker/', async (req, res) => {
     const { query: { hat, body, eyes, mouth, clothes, accessory, background, sort = 'nameAsc', page, pageSize } } = req;
@@ -84,6 +88,82 @@ const applyRoutes = (app, mongoClient) => {
     const babyRocker = await rockerCollection.findOne({ name });
     res.send({ babyRocker });
   });
+
+  app.get('/bac-spaceship/', async (req, res) => {
+    const { query: { 
+      arms, ship, type, cabin, cargo, effect, lights, weapon, 
+      texture, parasites, background, propulsion,
+      sort = 'nameAsc', page, pageSize 
+    } } = req;
+
+    if (sort && !/^(name(Asc|Desc))|(rank(Asc|Desc))$/.test(sort)) {
+      return res.status(400).send({ error: 'param invalid: sort' });
+    }
+    if (page && !/^\d+$/.test(page)) {
+      return res.status(400).send({ error: 'param invalid: page' });
+    }
+    if (pageSize && !/^\d+$/.test(pageSize)) {
+      return res.status(400).send({ error: 'param invalid: pageSize' });
+    }
+
+    const limit = pageSize ? parseInt(pageSize, 10) : 50;
+    if (limit < 0 || limit > 200) {
+      return res.status(400).send({ error: 'page size must be between 1 and 200' });
+    }
+    const skip = page ? (parseInt(page, 10) - 1) * limit : 0;
+    if (skip < 0 || skip > 10000) {
+      return res.status(400).send({ error: 'computed offset must be between 1 and 10000' });
+    }
+
+    const query = {
+      ...filter({arms}),
+      ...filter({ship}),
+      ...filter({type}),
+      ...filter({cabin}),
+      ...filter({cargo}),
+      ...filter({effect}),
+      ...filter({lights}),
+      ...filter({weapon}),
+      ...filter({texture}),
+      ...filter({parasites}),
+      ...filter({background}),
+      ...filter({propulsion}),
+    };
+
+    const spaceships = await spaceshipCollection.find(query, { sort: spaceshipSortMap[sort], skip, limit }).toArray();
+    res.send(spaceships);
+  });
+
+  app.get('/bac-spaceship/attributes/', async (req, res) => {
+    const stats = await spaceshipStats.findOne({});
+    const attributes = (await spaceshipTraits.find({}).toArray()).map((trait) => {
+      const { _id, values } = trait;
+      return { 
+        _id,
+        values: _.sortBy(values, ['count'])
+          .map(({name, count, pct}) => {
+            // const value = Object.keys(t)[0];
+            return {
+              label: `${name} (${count} / ${pct.toFixed(2)}%)`,
+              value: name
+            };
+          })
+      };
+    }).reduce((acc, curr) => ({ ...acc, [curr._id]: curr.values}), {});
+    res.send({stats, attributes});
+  });
+
+  app.get('/bac-spaceship/:spaceshipId', async (req, res) => {
+    const { params: { spaceshipId } } = req;
+    if (!spaceshipId || !/^\d{1,4}$/.test(spaceshipId)) {
+      return res.status(400).send({ error: 'spaceship id must be a number up to four digits long'});
+    }
+
+    const name = `BAC Spaceship [${pad.slice(0, -spaceshipId.length)}${spaceshipId}]`;
+    const spaceship = await spaceshipCollection.findOne({ name });
+    res.send({ spaceship });
+  });
+
 
   
   // app.get('/address/:address', (req, res) => {
