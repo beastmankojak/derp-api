@@ -1,13 +1,22 @@
-const twinsFilter = require('../filters/twinsFilter');
 const _ = require('lodash');
 
-const rockerSortMap = {
+const validateSortAndPageParams = require('../middleware/validateSortAndPageParams');
+const findAllAssets = require('../middleware/findAllAssets');
+const findAllAttributes = require('../middleware/findAllAttributes');
+const validateId = require('../middleware/validateId');
+const findById = require('../middleware/findById');
+
+const sortMap = {
   nameAsc: { name: 1 },
   nameDesc: { name: -1 },
   rankAsc: { rank: 1 },
   rankDesc: { rank: -1 },
 };
-const spaceshipSortMap = rockerSortMap;
+const rockerSortMap = sortMap;
+const spaceshipSortMap = sortMap;
+const christmasTraits = [
+  'hat', 'body', 'eyes', 'face', 'clothes', 'texture', 'accessory', 'background',
+];
 
 const pad = '0000';
 
@@ -21,6 +30,10 @@ const applyRoutes = (app, mongoClient) => {
   const spaceshipCollection = bacDb.collection('bacSpaceshipMeta');
   const spaceshipTraits = bacDb.collection('bacSpaceshipTraits');
   const spaceshipStats = bacDb.collection('bacSpaceshipStats');
+
+  const bacChristmasCollection = bacDb.collection('bacChristmasMeta');
+  const bacChristmasTraits = bacDb.collection('bacChristmasTraits');
+  const bacChristmasStats = bacDb.collection('bacChristmasStats');
 
   app.get('/baby-rocker/', async (req, res) => {
     const { query: { hat, body, eyes, mouth, clothes, accessory, background, sort = 'nameAsc', page, pageSize } } = req;
@@ -164,7 +177,23 @@ const applyRoutes = (app, mongoClient) => {
     res.send({ spaceship });
   });
 
+  app.get('/bac-christmas/', 
+    validateSortAndPageParams(300),
+    findAllAssets({ traits: christmasTraits, mongoCollection: bacChristmasCollection })
+  );
 
+  app.get('/bac-christmas/attributes/', 
+    findAllAttributes({ statsCollection: bacChristmasStats, traitsCollection: bacChristmasTraits })
+  );
+
+  app.get('/bac-christmas/:id', 
+    validateId('0000'), 
+    findById({ 
+      nameFn: (id) => `BabyAlienChristmas${id}`,
+      collection: bacChristmasCollection,
+      resultProp: 'bacChristmas', 
+    }),
+  );
   
   // app.get('/address/:address', (req, res) => {
   
