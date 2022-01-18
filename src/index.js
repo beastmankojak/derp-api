@@ -8,7 +8,10 @@ const applyMuggoRoutes = require('./webserver/applyMuggoRoutes');
 const PORT = process.env.PORT || 3000;
 const MONGODB_URL = process.env.MONGODB_URL || 'mongodb://localhost:27017';
 
-const origin = process.env.NODE_ENV === 'prod' ? /\/\/(www\.)?beastmankojak\.com$/ : '*';
+const origin = process.env.NODE_ENV === 'prod' ? [
+  /\/\/(www\.)?beastmankojak\.com$/,
+  /\/\/(www\.)?muggos\.io$/,
+ ] : '*';
 
 (async () => {
   const mongoClient = new MongoClient(MONGODB_URL);
