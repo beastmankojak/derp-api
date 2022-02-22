@@ -1,9 +1,9 @@
-const validateSortAndPageParams = (collectionTotal) => (req, res, next) => {
+const validateSortAndPageParams = (collectionTotal, { sortRx = /^(name|rank)(Asc|Desc)$/ } = {}) => (req, res, next) => {
   const { query: { 
     sort = 'nameAsc', page, pageSize 
   } } = req;
 
-  if (sort && !/^(name(Asc|Desc))|(rank(Asc|Desc))$/.test(sort)) {
+  if (sort && !sortRx.test(sort)) {
     return res.status(400).send({ error: 'param invalid: sort' });
   }
   if (page && !/^\d+$/.test(page)) {
