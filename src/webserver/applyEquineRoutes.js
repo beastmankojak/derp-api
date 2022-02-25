@@ -9,7 +9,7 @@ const exactTraits = [
 ];
 
 const numericTraits = [
-  'Age', 'acceleration', 'agility', 'endurance', 'speed', 'stamina', 'total'
+  'Age', 'acceleration', 'agility', 'endurance', 'speed', 'stamina', 'total', 'listing.price'
 ];
 
 const sortMap = {
@@ -19,6 +19,8 @@ const sortMap = {
   rankDesc: { rank: -1 },
   totalAsc: { total: 1 },
   totalDesc: { total: -1 },
+  priceAsc: { 'listing.price': 1 },
+  priceDesc: { 'listing.price': -1 }
 };
 
 const qOps = {
@@ -65,8 +67,6 @@ const findAllAssets = ({ exactTraits, numericTraits, mongoCollection }) => async
 
   const q = { ...exactQuery, ...numericQuery };
 
-  console.log(q, sortMap[sort], skip, limit);
-
   const assets = await mongoCollection.find(
     { ...exactQuery, ...numericQuery }, 
     { sort: sortMap[sort], skip, limit }
@@ -77,12 +77,12 @@ const findAllAssets = ({ exactTraits, numericTraits, mongoCollection }) => async
 const applyRoutes = (app, mongoClient) => {
   const equineDb = mongoClient.db('equine');
 
-  const horseCollection = equineDb.collection('horsesMeta');
+  const horseCollection = equineDb.collection('horseListings');
   const horseTraits = equineDb.collection('horsesTraits');
   const horseStats = equineDb.collection('horsesStats');
 
   app.get('/horses/', 
-    validateSortAndPageParams(14166, { sortRx: /^(name|rank|total)(Asc|Desc)$/ }),
+    validateSortAndPageParams(14125, { sortRx: /^(name|rank|total|price)(Asc|Desc)$/ }),
     findAllAssets({ exactTraits, numericTraits, mongoCollection: horseCollection })
   );
 
