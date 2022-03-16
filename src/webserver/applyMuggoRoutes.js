@@ -64,7 +64,7 @@ const applyRoutes = (app, mongoClient) => {
     res.send({ ...swagResult });
   });
 
-  app.post('/muggos/auth/', async (req, res) => {
+  app.get('/muggos/auth/', async (req, res) => {
     const { query: { code } } = req;
     console.log('Discord code: ', code);
     res.send('OK');
